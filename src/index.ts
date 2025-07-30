@@ -44,7 +44,6 @@ export const orgName = argv.organization as string;
 const tenantId = argv.tenant;
 const orgUrl = "https://dev.azure.com/" + orgName;
 
-
 // Returns either an AccessToken (for AAD) or a fake AccessToken for PAT (for compatibility)
 async function getAzureDevOpsToken(): Promise<AccessToken> {
   // Prefer PAT if provided
@@ -71,17 +70,11 @@ async function getAzureDevOpsToken(): Promise<AccessToken> {
   return token;
 }
 
-
 function getAzureDevOpsClient(userAgentComposer: UserAgentComposer): () => Promise<azdev.WebApi> {
   return async () => {
     const token = await getAzureDevOpsToken();
-  let authHandler: azdev.IRequestHandler;
     // If PAT is used, use PersonalAccessTokenHandler, else use BearerHandler
-    if ((argv.pat || process.env.ADO_MCP_PAT)) {
-      authHandler = azdev.getPersonalAccessTokenHandler(token.token);
-    } else {
-      authHandler = azdev.getBearerHandler(token.token);
-    }
+    const authHandler = argv.pat || process.env.ADO_MCP_PAT ? azdev.getPersonalAccessTokenHandler(token.token) : azdev.getBearerHandler(token.token);
     const connection = new azdev.WebApi(orgUrl, authHandler, undefined, {
       productName: "AzureDevOps.MCP",
       productVersion: packageVersion,

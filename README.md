@@ -143,7 +143,6 @@ For the best experience, use Visual Studio Code and GitHub Copilot. See the [get
 3. Install [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 4. Open VS Code in an empty folder
 
-
 ### Azure Login
 
 You can authenticate with Azure DevOps in two ways:

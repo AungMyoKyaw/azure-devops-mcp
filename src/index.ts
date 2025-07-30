@@ -16,6 +16,7 @@ import { UserAgentComposer } from "./useragent.js";
 import { packageVersion } from "./version.js";
 
 // Parse command line arguments using yargs
+
 const argv = yargs(hideBin(process.argv))
   .scriptName("mcp-server-azuredevops")
   .usage("Usage: $0 <organization> [options]")
@@ -31,6 +32,11 @@ const argv = yargs(hideBin(process.argv))
     describe: "Azure tenant ID (optional, required for multi-tenant scenarios)",
     type: "string",
   })
+  .option("pat", {
+    describe: "Azure DevOps Personal Access Token (PAT) (optional)",
+    type: "string",
+    default: process.env.ADO_MCP_PAT,
+  })
   .help()
   .parseSync();
 
@@ -38,7 +44,15 @@ export const orgName = argv.organization as string;
 const tenantId = argv.tenant;
 const orgUrl = "https://dev.azure.com/" + orgName;
 
+
+// Returns either an AccessToken (for AAD) or a fake AccessToken for PAT (for compatibility)
 async function getAzureDevOpsToken(): Promise<AccessToken> {
+  // Prefer PAT if provided
+  const pat = argv.pat || process.env.ADO_MCP_PAT;
+  if (pat) {
+    // Return a fake AccessToken for compatibility, but the actual PAT will be used in the client
+    return { token: pat, expiresOnTimestamp: Date.now() + 1000 * 60 * 60 * 24 * 365 };
+  }
   if (process.env.ADO_MCP_AZURE_TOKEN_CREDENTIALS) {
     process.env.AZURE_TOKEN_CREDENTIALS = process.env.ADO_MCP_AZURE_TOKEN_CREDENTIALS;
   } else {
@@ -50,7 +64,6 @@ async function getAzureDevOpsToken(): Promise<AccessToken> {
     const azureCliCredential = new AzureCliCredential({ tenantId });
     credential = new ChainedTokenCredential(azureCliCredential, credential);
   }
-
   const token = await credential.getToken("499b84ac-1321-427f-aa17-267ca6975798/.default");
   if (!token) {
     throw new Error("Failed to obtain Azure DevOps token. Ensure you have Azure CLI logged in or another token source setup correctly.");
@@ -58,10 +71,17 @@ async function getAzureDevOpsToken(): Promise<AccessToken> {
   return token;
 }
 
+
 function getAzureDevOpsClient(userAgentComposer: UserAgentComposer): () => Promise<azdev.WebApi> {
   return async () => {
     const token = await getAzureDevOpsToken();
-    const authHandler = azdev.getBearerHandler(token.token);
+  let authHandler: azdev.IRequestHandler;
+    // If PAT is used, use PersonalAccessTokenHandler, else use BearerHandler
+    if ((argv.pat || process.env.ADO_MCP_PAT)) {
+      authHandler = azdev.getPersonalAccessTokenHandler(token.token);
+    } else {
+      authHandler = azdev.getBearerHandler(token.token);
+    }
     const connection = new azdev.WebApi(orgUrl, authHandler, undefined, {
       productName: "AzureDevOps.MCP",
       productVersion: packageVersion,

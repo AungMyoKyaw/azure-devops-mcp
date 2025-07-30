@@ -143,13 +143,36 @@ For the best experience, use Visual Studio Code and GitHub Copilot. See the [get
 3. Install [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 4. Open VS Code in an empty folder
 
+
 ### Azure Login
+
+You can authenticate with Azure DevOps in two ways:
+
+#### 1. Azure CLI (Default)
 
 Ensure you are logged in to Azure DevOps via the Azure CLI:
 
 ```sh
 az login
 ```
+
+#### 2. Personal Access Token (PAT)
+
+You may also use a Personal Access Token (PAT) for authentication. This is useful if you do not want to use `az login` or do not have access to Azure CLI.
+
+Set the PAT as an environment variable:
+
+```sh
+export ADO_MCP_PAT=your_pat_here
+```
+
+Or pass it as a CLI flag:
+
+```sh
+npx @azure-devops/mcp <organization> --pat your_pat_here
+```
+
+If a PAT is provided, it will be used for authentication instead of Azure CLI or Azure AD credentials.
 
 ### Installation
 
